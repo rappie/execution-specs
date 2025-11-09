@@ -1,5 +1,6 @@
 """Sender mutex class that allows sending transactions one at a time."""
 
+import time
 from pathlib import Path
 from typing import Generator, Iterator
 
@@ -50,6 +51,18 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "Gas limit set for the funding transactions of each worker's sender key."
         ),
     )
+    sender_group.addoption(
+        "--sender-funding-delay",
+        action="store",
+        dest="sender_funding_delay",
+        type=int,
+        default=0,
+        help=(
+            "Number of seconds to wait after funding worker accounts before they are used. "
+            "Useful for chains with consensus/execution lag where state changes take time to propagate. "
+            "Default: 0 (no delay for chains with immediate state availability)."
+        ),
+    )
 
 
 @pytest.fixture(scope="session")
@@ -76,6 +89,12 @@ def sender_fund_refund_gas_limit(request: pytest.FixtureRequest) -> int:
 def seed_account_sweep_amount(request: pytest.FixtureRequest) -> int | None:
     """Get the seed account sweep amount."""
     return request.config.option.seed_account_sweep_amount
+
+
+@pytest.fixture(scope="session")
+def sender_funding_delay(request: pytest.FixtureRequest) -> int:
+    """Get the delay in seconds to wait after funding worker accounts."""
+    return request.config.option.sender_funding_delay
 
 
 @pytest.fixture(scope="session")
@@ -142,6 +161,7 @@ def sender_key(
     session_temp_folder: Path,
     sender_funding_transactions_gas_price: int,
     sender_fund_refund_gas_limit: int,
+    sender_funding_delay: int,
 ) -> Generator[EOA, None, None]:
     """
     Get the sender keys for all tests.
@@ -175,6 +195,10 @@ def sender_key(
         with seed_sender_nonce_file.open("w") as f:
             f.write(str(seed_sender.nonce))
     eth_rpc.wait_for_transaction(fund_tx)
+    # Allow time for chains with consensus/execution lag to propagate
+    # the worker account's funded balance before it's used
+    if sender_funding_delay > 0:
+        time.sleep(sender_funding_delay)
 
     yield sender
 

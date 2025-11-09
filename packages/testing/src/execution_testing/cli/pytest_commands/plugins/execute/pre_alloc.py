@@ -127,6 +127,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=False,
         help="Skip cleanup phase after each test.",
     )
+    pre_alloc_group.addoption(
+        "--local-nonce-tracking",
+        action="store_true",
+        dest="local_nonce_tracking",
+        default=False,
+        help=(
+            "Use local nonce tracking instead of querying RPC for each transaction. "
+            "Useful for chains with consensus/execution lag where RPC queries return stale nonce values. "
+            "When enabled, nonce is queried once after funding, then tracked locally."
+        ),
+    )
 
 
 @pytest.hookimpl(trylast=True)
@@ -182,6 +193,7 @@ class Alloc(BaseAlloc):
     _chain_id: int = PrivateAttr()
     _node_id: str = PrivateAttr("")
     _address_stubs: AddressStubs = PrivateAttr()
+    _local_nonce_tracking: bool = PrivateAttr(default=False)
 
     def __init__(
         self,
@@ -195,6 +207,7 @@ class Alloc(BaseAlloc):
         evm_code_type: EVMCodeType | None = None,
         node_id: str = "",
         address_stubs: AddressStubs | None = None,
+        local_nonce_tracking: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initialize the pre-alloc with the given parameters."""
@@ -208,13 +221,19 @@ class Alloc(BaseAlloc):
         self._eoa_fund_amount_default = eoa_fund_amount_default
         self._node_id = node_id
         self._address_stubs = address_stubs or AddressStubs(root={})
+        self._local_nonce_tracking = local_nonce_tracking
 
     # always refresh _sender nonce from RPC ("pending") before building tx
     def _refresh_sender_nonce(self) -> None:
         """
         Synchronize self._sender.nonce with the node's view.
         Prefer 'pending' to account for in-flight transactions.
+
+        If local_nonce_tracking is enabled, skip RPC query and use local tracking.
         """
+        if self._local_nonce_tracking:
+            return  # Use local nonce tracking, don't query RPC
+
         try:
             rpc_nonce = self._eth_rpc.get_transaction_count(
                 self._sender, block_number="pending"
@@ -605,6 +624,12 @@ def eoa_fund_amount_default(request: pytest.FixtureRequest) -> int:
     return request.config.option.eoa_fund_amount_default
 
 
+@pytest.fixture(scope="session")
+def local_nonce_tracking(request: pytest.FixtureRequest) -> bool:
+    """Return whether to use local nonce tracking instead of RPC queries."""
+    return request.config.getoption("local_nonce_tracking", False)
+
+
 @pytest.fixture(autouse=True, scope="function")
 def pre(
     fork: Fork,
@@ -617,6 +642,7 @@ def pre(
     default_gas_price: int,
     address_stubs: AddressStubs | None,
     skip_cleanup: bool,
+    local_nonce_tracking: bool,
     request: pytest.FixtureRequest,
 ) -> Generator[Alloc, None, None]:
     """Return default pre allocation for all tests (Empty alloc)."""
@@ -629,6 +655,12 @@ def pre(
     # Record the starting balance of the sender
     sender_test_starting_balance = eth_rpc.get_balance(sender_key)
 
+    # If using local nonce tracking, initialize nonce from RPC once
+    # (Assumes --sender-funding-delay was used to allow state propagation)
+    if local_nonce_tracking:
+        # Query nonce from RPC once to initialize correctly
+        sender_key.nonce = Number(eth_rpc.get_transaction_count(sender_key))
+
     # Prepare the pre-alloc
     pre = Alloc(
         fork=fork,
@@ -640,6 +672,7 @@ def pre(
         eoa_fund_amount_default=eoa_fund_amount_default,
         node_id=request.node.nodeid,
         address_stubs=address_stubs,
+        local_nonce_tracking=local_nonce_tracking,
     )
 
     # Yield the pre-alloc for usage during the test
