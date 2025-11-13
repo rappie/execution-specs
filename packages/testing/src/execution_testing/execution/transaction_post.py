@@ -63,17 +63,14 @@ class TransactionPost(BaseExecute):
         for block in self.blocks:
             signed_txs = []
             for tx_index, tx in enumerate(block):
-                # Add metadata
-                tx = tx.with_signature_and_sender()
-
-                # Apply gas limit multiplier
+                # Apply gas limit multiplier BEFORE signing
                 if gas_limit_multiplier != 1.0 and tx.gas_limit is not None:
                     original_gas_limit = tx.gas_limit
                     new_gas_limit = int(original_gas_limit * gas_limit_multiplier)
-                    # Create new transaction with multiplied gas limit
                     tx = tx.model_copy(update={"gas_limit": new_gas_limit})
-                    # Re-sign the transaction since gas_limit affects the signature
-                    tx = tx.with_signature_and_sender()
+
+                # Sign with the final gas_limit
+                tx = tx.with_signature_and_sender()
 
                 to_address = tx.to
                 label = (
