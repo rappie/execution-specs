@@ -256,7 +256,6 @@ class DepositTransaction(DepositInteractionBase):
         return [
             Transaction(
                 gas_limit=request.gas_limit,
-                gas_price=0x07,
                 to=request.interaction_contract_address,
                 value=request.value,
                 data=request.calldata,
@@ -339,7 +338,6 @@ class DepositContract(DepositInteractionBase):
         return [
             Transaction(
                 gas_limit=self.tx_gas_limit,
-                gas_price=0x07,
                 to=self.entry_address,
                 value=self.tx_value,
                 data=b"".join(r.calldata for r in self.requests),

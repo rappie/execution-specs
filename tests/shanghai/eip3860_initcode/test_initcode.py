@@ -151,7 +151,6 @@ def test_contract_creating_tx(
         to=None,
         data=initcode,
         gas_limit=10000000,
-        gas_price=10,
         sender=sender,
     )
 

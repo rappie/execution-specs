@@ -17,6 +17,7 @@ from execution_testing import (
     Op,
     Storage,
     Transaction,
+    TransactionDefaults,
 )
 
 from .common import (
@@ -229,11 +230,10 @@ def test_scenarios(
         if scenario.category == "double_call_combinations":
             tx_max_gas *= 2
 
-        tx_gasprice: int = 10
         exec_env = ExecutionEnvironment(
             fork=fork,
             origin=tx_origin,
-            gasprice=tx_gasprice,
+            gasprice=TransactionDefaults.gas_price,
             timestamp=tx_env.timestamp,  # we can't know timestamp before head,
             # use gas hash
             number=len(blocks) + 1,
@@ -270,7 +270,6 @@ def test_scenarios(
         tx = Transaction(
             sender=tx_origin,
             gas_limit=tx_max_gas + 100_000,
-            gas_price=tx_gasprice,
             to=runner_contract,
             data=bytes.fromhex("11223344"),
             value=0,

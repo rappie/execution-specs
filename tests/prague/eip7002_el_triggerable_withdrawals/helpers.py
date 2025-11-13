@@ -113,7 +113,6 @@ class WithdrawalRequestTransaction(WithdrawalRequestInteractionBase):
         return [
             Transaction(
                 gas_limit=request.gas_limit,
-                gas_price=1_000_000_000,
                 to=request.interaction_contract_address,
                 value=request.value,
                 data=request.calldata,
@@ -196,7 +195,6 @@ class WithdrawalRequestContract(WithdrawalRequestInteractionBase):
         return [
             Transaction(
                 gas_limit=self.tx_gas_limit,
-                gas_price=1_000_000_000,
                 to=self.entry_address,
                 value=0,
                 data=b"".join(r.calldata for r in self.requests),

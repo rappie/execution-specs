@@ -92,7 +92,6 @@ def test_bal_balance_changes(
         to=bob,
         value=100,
         gas_limit=tx_gas_limit,
-        gas_price=1_000_000_000,
     )
 
     alice_account = pre[alice]
@@ -284,7 +283,6 @@ def test_bal_self_destruct(
         to=factory if self_destruct_in_same_tx else kaboom,
         value=transfer_amount,
         gas_limit=1_000_000,
-        gas_price=0xA,
     )
 
     block = Block(
@@ -422,7 +420,7 @@ def test_bal_account_access_target(
     )
 
     tx = Transaction(
-        sender=alice, to=oracle_contract, gas_limit=5_000_000, gas_price=0xA
+        sender=alice, to=oracle_contract, gas_limit=5_000_000
     )
 
     block = Block(
@@ -457,7 +455,7 @@ def test_bal_call_with_value_transfer(
     oracle_contract = pre.deploy_contract(code=oracle_code, balance=200)
 
     tx = Transaction(
-        sender=alice, to=oracle_contract, gas_limit=1_000_000, gas_price=0xA
+        sender=alice, to=oracle_contract, gas_limit=1_000_000
     )
 
     block = Block(
@@ -504,7 +502,7 @@ def test_bal_callcode_with_value_transfer(
     oracle_contract = pre.deploy_contract(code=oracle_code, balance=200)
 
     tx = Transaction(
-        sender=alice, to=oracle_contract, gas_limit=1_000_000, gas_price=0xA
+        sender=alice, to=oracle_contract, gas_limit=1_000_000
     )
 
     block = Block(
@@ -996,7 +994,6 @@ def test_bal_self_transfer(
         to=alice,
         gas_limit=intrinsic_gas_cost,
         value=100,
-        gas_price=0xA,
     )
 
     block = Block(
@@ -1038,7 +1035,6 @@ def test_bal_zero_value_transfer(
         to=bob,
         gas_limit=intrinsic_gas_cost,
         value=0,
-        gas_price=0xA,
     )
 
     block = Block(
@@ -1116,7 +1112,6 @@ def test_bal_net_zero_balance_transfer(
         to=net_zero_bal_contract,
         value=transfer_amount,
         gas_limit=1_000_000,
-        gas_price=0xA,
     )
 
     expected_balance_in_slot = initial_balance + transfer_amount
@@ -1193,7 +1188,7 @@ def test_bal_pure_contract_call(
     gas_limit = intrinsic_gas_calculator() + 5_000  # Buffer
 
     tx = Transaction(
-        sender=alice, to=pure_contract, gas_limit=gas_limit, gas_price=0xA
+        sender=alice, to=pure_contract, gas_limit=gas_limit
     )
 
     block = Block(
@@ -1234,7 +1229,7 @@ def test_bal_noop_storage_write(
     )
 
     tx = Transaction(
-        sender=alice, to=storage_contract, gas_limit=gas_limit, gas_price=0xA
+        sender=alice, to=storage_contract, gas_limit=gas_limit
     )
 
     block = Block(
@@ -1273,7 +1268,7 @@ def test_bal_aborted_storage_access(
     )
 
     tx = Transaction(
-        sender=alice, to=storage_contract, gas_limit=5_000_000, gas_price=0xA
+        sender=alice, to=storage_contract, gas_limit=5_000_000
     )
 
     block = Block(
@@ -1355,7 +1350,7 @@ def test_bal_aborted_account_access(
     )
 
     tx = Transaction(
-        sender=alice, to=abort_contract, gas_limit=5_000_000, gas_price=0xA
+        sender=alice, to=abort_contract, gas_limit=5_000_000
     )
 
     block = Block(
@@ -1397,7 +1392,7 @@ def test_bal_fully_unmutated_account(
     )
 
     tx = Transaction(
-        sender=alice, to=oracle, gas_limit=1_000_000, value=0, gas_price=0xA
+        sender=alice, to=oracle, gas_limit=1_000_000, value=0
     )
 
     block = Block(
