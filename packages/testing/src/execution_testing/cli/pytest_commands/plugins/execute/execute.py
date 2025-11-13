@@ -3,6 +3,7 @@ Test execution plugin for pytest, to run Ethereum tests using in live networks.
 """
 
 import os
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Type
@@ -84,6 +85,18 @@ def pytest_addoption(parser: pytest.Parser) -> None:
             "Maximum gas used to execute a single transaction. "
             "Will be used as ceiling for tests that attempt to consume the entire block gas limit."
             f"(Default: {EnvironmentDefaults.gas_limit // 4})"
+        ),
+    )
+    execute_group.addoption(
+        "--gas-limit-multiplier",
+        action="store",
+        dest="gas_limit_multiplier",
+        default=1.0,
+        type=float,
+        help=(
+            "Multiply all transaction gas limits by this factor. "
+            "Useful for chains with higher gas costs. "
+            "(Default: 1.0)"
         ),
     )
     execute_group.addoption(
@@ -304,6 +317,14 @@ def default_max_priority_fee_per_gas(
     return request.config.getoption("default_max_priority_fee_per_gas")
 
 
+@pytest.fixture(scope="session")
+def gas_limit_multiplier(
+    request: pytest.FixtureRequest,
+) -> float:
+    """Return gas limit multiplier for all transactions."""
+    return request.config.getoption("gas_limit_multiplier")
+
+
 @pytest.fixture(autouse=True, scope="session")
 def modify_transaction_defaults(
     default_gas_price: int,
@@ -437,6 +458,12 @@ def base_test_parametrizer(cls: Type[BaseTest]) -> Any:
                     [str(eoa) for eoa in pre._funded_eoa]
                 )
 
+                # Allow time for chains with consensus/execution lag to propagate
+                # the test setup state (contract deployments + EOA funding) before test execution
+                funding_delay = request.config.getoption("funding_delay")
+                if funding_delay > 0:
+                    time.sleep(funding_delay)
+
                 execute = self.execute(execute_format=execute_format)
                 execute.execute(
                     fork=fork,
@@ -504,7 +531,12 @@ def pytest_collection_modifyitems(
             items_for_removal.append(i)
             continue
         fork: Fork = params["fork"]
-        spec_type, execute_format = get_spec_format_for_item(params)
+        try:
+            spec_type, execute_format = get_spec_format_for_item(params)
+        except ValueError:
+            # Skip items without a valid spec type format
+            items_for_removal.append(i)
+            continue
         assert issubclass(execute_format, BaseExecute)
         markers = list(item.iter_markers())
         if spec_type.discard_execute_format_by_marks(

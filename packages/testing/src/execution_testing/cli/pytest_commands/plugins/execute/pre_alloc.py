@@ -208,6 +208,7 @@ class Alloc(BaseAlloc):
         node_id: str = "",
         address_stubs: AddressStubs | None = None,
         local_nonce_tracking: bool = False,
+        gas_limit_multiplier: float = 1.0,
         **kwargs: Any,
     ) -> None:
         """Initialize the pre-alloc with the given parameters."""
@@ -222,6 +223,7 @@ class Alloc(BaseAlloc):
         self._node_id = node_id
         self._address_stubs = address_stubs or AddressStubs(root={})
         self._local_nonce_tracking = local_nonce_tracking
+        self._gas_limit_multiplier = gas_limit_multiplier
 
     # always refresh _sender nonce from RPC ("pending") before building tx
     def _refresh_sender_nonce(self) -> None:
@@ -362,7 +364,9 @@ class Alloc(BaseAlloc):
         deploy_gas_limit += calldata_gas_calculator(data=initcode)
 
         # Limit the gas limit
-        deploy_gas_limit = min(deploy_gas_limit * 2, 30_000_000)
+        # Apply multiplier for chains with higher gas costs
+        deploy_gas_limit = int(deploy_gas_limit * 2 * self._gas_limit_multiplier)
+        deploy_gas_limit = min(deploy_gas_limit, int(30_000_000 * self._gas_limit_multiplier))
         print(f"Deploying contract with gas limit: {deploy_gas_limit}")
 
         self._refresh_sender_nonce()
@@ -449,7 +453,7 @@ class Alloc(BaseAlloc):
                             signer=eoa,
                         ),
                     ],
-                    gas_limit=100_000,
+                    gas_limit=int(100_000 * self._gas_limit_multiplier),
                 ).with_signature_and_sender()
                 eoa.nonce = Number(eoa.nonce + 1)
                 set_storage_tx.metadata = TransactionTestMetadata(
@@ -484,7 +488,7 @@ class Alloc(BaseAlloc):
                             signer=eoa,
                         ),
                     ],
-                    gas_limit=100_000,
+                    gas_limit=int(100_000 * self._gas_limit_multiplier),
                 ).with_signature_and_sender()
                 eoa.nonce = Number(eoa.nonce + 1)
             else:
@@ -501,7 +505,7 @@ class Alloc(BaseAlloc):
                             signer=eoa,
                         ),
                     ],
-                    gas_limit=100_000,
+                    gas_limit=int(100_000 * self._gas_limit_multiplier),
                 ).with_signature_and_sender()
                 eoa.nonce = Number(eoa.nonce + 1)
 
@@ -513,6 +517,7 @@ class Alloc(BaseAlloc):
                     sender=self._sender,
                     to=eoa,
                     value=amount,
+                    gas_limit=int(21_000 * self._gas_limit_multiplier),
                 ).with_signature_and_sender()
 
         if fund_tx is not None:
@@ -550,6 +555,7 @@ class Alloc(BaseAlloc):
             sender=self._sender,
             to=address,
             value=amount,
+            gas_limit=int(21_000 * self._gas_limit_multiplier),
         ).with_signature_and_sender()
         fund_tx.metadata = TransactionTestMetadata(
             test_id=self._node_id,
@@ -643,6 +649,7 @@ def pre(
     address_stubs: AddressStubs | None,
     skip_cleanup: bool,
     local_nonce_tracking: bool,
+    gas_limit_multiplier: float,
     request: pytest.FixtureRequest,
 ) -> Generator[Alloc, None, None]:
     """Return default pre allocation for all tests (Empty alloc)."""
@@ -673,6 +680,7 @@ def pre(
         node_id=request.node.nodeid,
         address_stubs=address_stubs,
         local_nonce_tracking=local_nonce_tracking,
+        gas_limit_multiplier=gas_limit_multiplier,
     )
 
     # Yield the pre-alloc for usage during the test
@@ -684,14 +692,14 @@ def pre(
         for idx, eoa in enumerate(pre._funded_eoa):
             remaining_balance = eth_rpc.get_balance(eoa)
             eoa.nonce = Number(eth_rpc.get_transaction_count(eoa))
-            refund_gas_limit = 21_000
+            refund_gas_limit = int(21_000 * gas_limit_multiplier)
             tx_cost = refund_gas_limit * default_gas_price
             if remaining_balance < tx_cost:
                 continue
             refund_tx = Transaction(
                 sender=eoa,
                 to=sender_key,
-                gas_limit=21_000,
+                gas_limit=refund_gas_limit,
                 gas_price=default_gas_price,
                 value=remaining_balance - tx_cost,
             ).with_signature_and_sender()

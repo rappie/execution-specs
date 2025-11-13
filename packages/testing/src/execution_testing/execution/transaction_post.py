@@ -54,6 +54,9 @@ class TransactionPost(BaseExecute):
             "Transaction type 3 is not supported in execute mode."
         )
 
+        # Get gas limit multiplier from config
+        gas_limit_multiplier = request.config.getoption("gas_limit_multiplier", 1.0)
+
         # Track transaction hashes for gas validation (benchmarking)
         all_tx_hashes = []
 
@@ -62,6 +65,16 @@ class TransactionPost(BaseExecute):
             for tx_index, tx in enumerate(block):
                 # Add metadata
                 tx = tx.with_signature_and_sender()
+
+                # Apply gas limit multiplier
+                if gas_limit_multiplier != 1.0 and tx.gas_limit is not None:
+                    original_gas_limit = tx.gas_limit
+                    new_gas_limit = int(original_gas_limit * gas_limit_multiplier)
+                    # Create new transaction with multiplied gas limit
+                    tx = tx.model_copy(update={"gas_limit": new_gas_limit})
+                    # Re-sign the transaction since gas_limit affects the signature
+                    tx = tx.with_signature_and_sender()
+
                 to_address = tx.to
                 label = (
                     to_address.label
