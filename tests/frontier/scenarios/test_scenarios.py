@@ -17,8 +17,8 @@ from execution_testing import (
     Op,
     Storage,
     Transaction,
-    TransactionDefaults,
 )
+from execution_testing.test_types import TransactionDefaults
 
 from .common import (
     ExecutionEnvironment,
