@@ -67,6 +67,12 @@ class TransactionPost(BaseExecute):
                 if gas_limit_multiplier != 1.0 and tx.gas_limit is not None:
                     original_gas_limit = tx.gas_limit
                     new_gas_limit = int(original_gas_limit * gas_limit_multiplier)
+
+                    # Cap at transaction_gas_limit if specified (enforce ceiling)
+                    transaction_gas_limit = request.config.getoption("transaction_gas_limit", None)
+                    if transaction_gas_limit is not None:
+                        new_gas_limit = min(new_gas_limit, transaction_gas_limit)
+
                     tx = tx.model_copy(update={"gas_limit": new_gas_limit})
 
                 # Sign with the final gas_limit
