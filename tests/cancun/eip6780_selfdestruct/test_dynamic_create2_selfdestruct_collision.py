@@ -143,7 +143,7 @@ def test_dynamic_create2_selfdestruct_collision(
         # Make a subcall that do CREATE2 and returns its the result
         + Op.CALLDATACOPY(0, 0, Op.CALLDATASIZE())
         + Op.CALL(
-            100000,
+            1_000_000,
             address_code,
             first_create2_value,
             0,
@@ -156,7 +156,7 @@ def test_dynamic_create2_selfdestruct_collision(
             Op.MLOAD(0),
         )
         # In case the create2 didn't work, flush account balance
-        + Op.CALL(100000, address_code, 0, 0, 0, 0, 0)
+        + Op.CALL(1_000_000, address_code, 0, 0, 0, 0, 0)
         # Call to the created account to trigger selfdestruct
         + Op.CALL(
             100000, call_address_in_between, first_call_value, 0, 0, 0, 0
@@ -165,7 +165,7 @@ def test_dynamic_create2_selfdestruct_collision(
         # the result
         + Op.CALLDATACOPY(0, 0, Op.CALLDATASIZE())
         + Op.CALL(
-            100000,
+            1_000_000,
             address_code,
             second_create2_value,
             0,
@@ -367,7 +367,7 @@ def test_dynamic_create2_selfdestruct_collision_two_different_transactions(
         # Make a subcall that do CREATE2 and returns its the result
         + Op.CALLDATACOPY(0, 0, Op.CALLDATASIZE())
         + Op.CALL(
-            100000,
+            1_000_000,
             address_code,
             first_create2_value,
             0,
@@ -380,7 +380,7 @@ def test_dynamic_create2_selfdestruct_collision_two_different_transactions(
             Op.MLOAD(0),
         )
         # In case the create2 didn't work, flush account balance
-        + Op.CALL(100000, address_code, 0, 0, 0, 0, 0)
+        + Op.CALL(1_000_000, address_code, 0, 0, 0, 0, 0)
         # Call to the created account to trigger selfdestruct
         + Op.CALL(100000, create2_address, first_call_value, 0, 0, 0, 0)
         + Op.SSTORE(code_worked, 1),
@@ -395,7 +395,7 @@ def test_dynamic_create2_selfdestruct_collision_two_different_transactions(
         # the result
         + Op.CALLDATACOPY(0, 0, Op.CALLDATASIZE())
         + Op.CALL(
-            100000,
+            1_000_000,
             address_code,
             second_create2_value,
             0,
@@ -640,7 +640,7 @@ def test_dynamic_create2_selfdestruct_collision_multi_tx(
         # Make a subcall that do CREATE2 and returns its the result
         + Op.CALLDATACOPY(0, 0, Op.CALLDATASIZE())
         + Op.CALL(
-            100000,
+            1_000_000,
             address_code,
             first_create2_value,
             0,
